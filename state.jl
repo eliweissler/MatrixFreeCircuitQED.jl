@@ -1,8 +1,10 @@
 
 import Base: size, getindex, setindex!, iterate, length
 
+dtype = ComplexF32
+
 function one_one(N, n)
-    v = zeros(N)
+    v = zeros(dtype, N)
     v[n] = 1
     return v
 end
@@ -15,7 +17,11 @@ mutable struct State{T} <: AbstractVector{T}
 end
 
 # Constructor
-State(n) = State(one_one(n, 1), [zeros(n), zeros(n)], zeros(n))
+State(N, n) = State(one_one(N, n), [zeros(dtype, N), zeros(dtype, N)], zeros(dtype, N))
+
+# Constructor
+State(N) = State(N, 1)
+
 
 # Define size
 size(v::State) = (length(v.data),)
@@ -55,7 +61,6 @@ end
 ## TODO: Add to this
 # Define operations on the state
 function x_temp!(v::State, source::Vector, target::Vector)
-
     target[1] = sqrt(2)*source[2]
     n = length(v)
     for i in 2:n-1
@@ -64,16 +69,12 @@ function x_temp!(v::State, source::Vector, target::Vector)
     target[n] = sqrt(n)*source[n-1]
 end
 function p_temp!(v::State, source::Vector, target::Vector)
-
-    target[1] = source[2]
+    target[1] = -1.0im*sqrt(2)*source[2]
     n = length(v)
     for i in 2:n-1
         target[i] = 1.0im*(sqrt(i)*source[i-1] - sqrt(i+1)*source[i+1])
     end
-    target[n] = sqrt(n)*source[n-1]
-end
-function p_temp(v::State, source::Vector, target::Vector)
-    v.target[i] = 1.0im*(sqrt(i)*source[i-1] - sqrt(i+1)*source[i+1])
+    target[n] = 1.0im*sqrt(n)*source[n-1]
 end
 
 function apply_template!(v::State, template::Function, n::Integer, coeff::Number)
@@ -92,3 +93,6 @@ function apply_template!(v::State, template::Function, n::Integer, coeff::Number
     v.new_data += (coeff^n)*v.buffer[1 + mod(n+1, 2)]
 
 end
+
+# s = State(10)
+# apply_template!(s, p_temp!, 2, 1)

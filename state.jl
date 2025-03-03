@@ -1,6 +1,6 @@
 
 import Base: size, getindex, setindex!, iterate, length
-import KrylovKit: add!!
+import KrylovKit: add!!, apply
 
 dtype = ComplexF64
 
@@ -24,6 +24,14 @@ function add!!(y::State, x::State ; α::Number = 1, β::Number = 1)
     y.data *= β
     y.data += α*x.data
     y
+end
+function apply(operator, x::State, α₀, α₁)
+    og = State(x.data, x.buffer, x.new_data, x.target, x.source)
+    y = apply(operator, x)
+    if α₀ != zero(α₀) || α₁ != one(α₁)
+        y = add!!(y, og, α₀, α₁)
+    end
+    return y
 end
 
 # Constructor

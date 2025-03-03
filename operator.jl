@@ -52,4 +52,4 @@ x0 = State(10, 3)
 
 # harm_osc3(x0)
 
-vals, vecs, info = eigsolve(harm_osc, x0, 5)
+vals, vecs, info = eigsolve(harm_osc, x0, 5, ishermitian=true)

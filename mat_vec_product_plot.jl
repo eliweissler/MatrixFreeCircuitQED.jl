@@ -17,6 +17,8 @@ end
 # Parameters for the 3 coupled oscillators
 w1, w2, w3 = 1.0, 1.1, 1.2
 g12, g23 = 0.2, 0.2
+thread_strategy = :kj  # toggle: :k (outer only) or :kj (first two dimensions)
+
 
 # Sweep the number of levels per mode
 d_range = 5:5:90
@@ -36,7 +38,7 @@ for d in d_range
     n_mat = Array((a'*a).data)
     x_base = Array((a+a').data)
     x_mat = polynomial_coupling_operator(x_base, d)
-    H_mf_arr = MatrixFree3Oscillators(d, d, d, w1, w2, w3, g12, g23, n_mat, n_mat, n_mat, x_mat, x_mat, x_mat)
+    H_mf_arr = MatrixFree3Oscillators(d, d, d, w1, w2, w3, g12, g23, n_mat, n_mat, n_mat, x_mat, x_mat, x_mat; thread_strategy=thread_strategy)
     H_mf     = QuantumObject(H_mf_arr, type=Operator(), dims=(d, d, d))
 
     # Use a random state so sparse-state structure does not skew results.
@@ -56,6 +58,17 @@ end
 
 d_vals = collect(d_range)
 speedup =  times_direct_single ./ times_mf_single
+
+# Larger, presentation-friendly text sizing.
+axis_label_fs = 20
+tick_fs = 16
+legend_fs = 14
+title_fs = 24
+
+# On a log axis, lower error bars must remain strictly positive.
+std_direct_plot = min.(std_direct_single, 0.99 .* times_direct_single)
+std_mf_plot = min.(std_mf_single, 0.99 .* times_mf_single)
+
 all_times = vcat(times_direct_single, times_mf_single)
 emin = floor(Int, log10(minimum(all_times)))
 emax = ceil(Int, log10(maximum(all_times)))
@@ -64,20 +77,27 @@ decade_ticks = 10.0 .^ (emin:emax)
 p = plot(d_vals, times_direct_single;
     label     = "direct",
     marker    = :circle,
-    yerror    = std_direct_single,
+    yerror    = std_direct_plot,
     yaxis     = :log10,
     yticks    = decade_ticks,
     xlabel    = "Local Dimension (d)",
     ylabel    = "Time (ms)",
-    title     = "Single Mat-Vec for 3 oscillators ($(Threads.nthreads()) threads)",
+    xguidefontsize = axis_label_fs,
+    yguidefontsize = axis_label_fs,
+    xtickfontsize  = tick_fs,
+    ytickfontsize  = tick_fs,
+    legendfontsize = legend_fs,
+    titlefontsize  = title_fs,
+    title     = "Single Mat-Vec for 3 oscillators\n($(Threads.nthreads()) threads, strategy=$(thread_strategy))",
     legend    = :topleft,
-    size      = (900, 600),
+    size      = (1000, 800),
+    left_margin = 20Plots.mm,
     right_margin = 14Plots.mm,
 )
 plot!(p, d_vals, times_mf_single;
     label = "matrix-free",
     marker = :square,
-    yerror = std_mf_single,
+    yerror = std_mf_plot,
 )
 
 # Right axis: linear speedup ratio.
@@ -88,12 +108,15 @@ plot!(p_right, d_vals, speedup;
     marker = :diamond,
     yaxis  = :identity,
     ylabel = "Speedup (direct / mat-free)",
+    yguidefontsize = axis_label_fs,
+    ytickfontsize  = tick_fs,
+    legend = false,
 )
 
-# Proxy series so the speedup styling appears in the main legend.
+# Proxy series so speedup appears in the main legend.
 plot!(p, [NaN], [NaN]; label = "speedup", color = :black, marker = :diamond)
 
-savefig(p, "mat_vec_product_timing_$(Threads.nthreads())_threads.png")
+savefig(p, "mat_vec_product_timing_$(Threads.nthreads())_threads_$(thread_strategy).svg")
 println("Saved")
 
 # `display` can fail in headless or constrained render contexts even when savefig succeeds.

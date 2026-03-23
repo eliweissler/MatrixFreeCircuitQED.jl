@@ -38,5 +38,8 @@ MatrixFreeCircuitQED.jl integrates directly with QuantumToolbox.jl by overloadin
 
 A simple minimal example is included in basic_integration_test.jl. A custom tensor contraction is implemented for a system of three highly coupled oscillators with local dimension $d$. The script defines a custom AbstractQuantumObject with the overloaded mul! operator. Consistency in indexing, matrix vector products, time evolution, and diagonalization are verified versus a full instantiation of the system Hamiltonian.
 
-In mat_vec_product_plot.jl, we perform a simple benchmark on the matrix vector product operation. As seen in the blow plot, we see an approximately 20-30x speedup in the matrix vector product for systems with local dimension of d. Note this is a CPU-CPU comparison, no GPUs have been used yet.
-![Alt text](mat_vec_benchmark.png)
+In mat_vec_product_plot.jl, we perform a simple benchmark on the matrix vector product operation. As seen in the blow plot, we see an approximately 20-30x speedup in the matrix vector product for systems with local dimension of d. Note this is a CPU-CPU comparison, no GPUs have been used yet. We compare two different methods for CPU parallelization, one which parallelizes over one dimension of the contraction (uses up to $d$ threads) and one which parallelizes over the first two dimensions (uses up to $d^2$ threads). They both provide large speedups, but the two dimension parallelization offers faster performance for higher dimensions (>40x at $d=90$) at the cost of higher overhead.
+
+![Benchmark Plot](benchmark_k.svg)
+
+![Benchmark Plot](benchmark_kj.svg) 

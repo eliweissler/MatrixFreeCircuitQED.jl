@@ -143,8 +143,8 @@ function Base.getindex(H::MatrixFree3Oscillators, I::Int, J::Int)
 end
 
 # Implement a low-overhead matrix-free mat-vec kernel
-@inline function _site_action(H::MatrixFree3Oscillators, X, k::Int, j::Int, i::Int, T)
-    val = zero(T)
+@inline function _site_action(H::MatrixFree3Oscillators{TC}, X::Array{TC, 3}, k::Int, j::Int, i::Int) where {TC}
+    val = zero(TC)
 
     # Local term on mode 1
     for a in 1:H.d1
@@ -180,23 +180,22 @@ end
     return val
 end
 
-function _mul_thread_k!(Y, H::MatrixFree3Oscillators, X, T)
+function _mul_thread_k!(Y::Array{TC, 3}, H::MatrixFree3Oscillators{TC}, X::Array{TC, 3}) where {TC}
     Threads.@threads for k in 1:H.d3
-        for j in 1:H.d2
+        @inbounds for j in 1:H.d2
             for i in 1:H.d1
-                Y[k, j, i] = _site_action(H, X, k, j, i, T)
+                Y[k, j, i] = _site_action(H, X, k, j, i)
             end
         end
     end
 end
 
-function _mul_thread_kj!(Y, H::MatrixFree3Oscillators, X, T)
+function _mul_thread_kj!(Y::Array{TC, 3}, H::MatrixFree3Oscillators{TC}, X::Array{TC, 3}) where {TC}
     Threads.@threads for kj in 1:(H.d3 * H.d2)
         k = ((kj - 1) ÷ H.d2) + 1
         j = ((kj - 1) % H.d2) + 1
-
-        for i in 1:H.d1
-            Y[k, j, i] = _site_action(H, X, k, j, i, T)
+        @inbounds for i in 1:H.d1
+            Y[k, j, i] = _site_action(H, X, k, j, i)
         end
     end
 end
@@ -210,9 +209,9 @@ function LinearAlgebra.mul!(y::AbstractVector, H::MatrixFree3Oscillators, x::Abs
     fill!(Y, zero(eltype(y)))
 
     if H.thread_strategy == :k
-        _mul_thread_k!(Y, H, X, eltype(y))
+        _mul_thread_k!(Y, H, X)
     else
-        _mul_thread_kj!(Y, H, X, eltype(y))
+        _mul_thread_kj!(Y, H, X)
     end
 
     copyto!(y, reshape(Y, :))

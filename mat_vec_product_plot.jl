@@ -17,7 +17,7 @@ end
 # Parameters for the 3 coupled oscillators
 w1, w2, w3 = 1.0, 1.1, 1.2
 g12, g23 = 0.2, 0.2
-thread_strategy = :k  # toggle: :k (outer only) or :kj (first two dimensions)
+thread_strategy = :kj  # toggle: :k (outer only) or :kj (first two dimensions)
 
 
 # Sweep the number of levels per mode
@@ -59,6 +59,12 @@ end
 d_vals = collect(d_range)
 speedup =  times_direct_single ./ times_mf_single
 
+# Larger, presentation-friendly text sizing.
+axis_label_fs = 20
+tick_fs = 16
+legend_fs = 14
+title_fs = 24
+
 # On a log axis, lower error bars must remain strictly positive.
 std_direct_plot = min.(std_direct_single, 0.99 .* times_direct_single)
 std_mf_plot = min.(std_mf_single, 0.99 .* times_mf_single)
@@ -76,9 +82,16 @@ p = plot(d_vals, times_direct_single;
     yticks    = decade_ticks,
     xlabel    = "Local Dimension (d)",
     ylabel    = "Time (ms)",
-    title     = "Single Mat-Vec for 3 oscillators ($(Threads.nthreads()) threads, strategy=$(thread_strategy))",
+    xguidefontsize = axis_label_fs,
+    yguidefontsize = axis_label_fs,
+    xtickfontsize  = tick_fs,
+    ytickfontsize  = tick_fs,
+    legendfontsize = legend_fs,
+    titlefontsize  = title_fs,
+    title     = "Single Mat-Vec for 3 oscillators\n($(Threads.nthreads()) threads, strategy=$(thread_strategy))",
     legend    = :topleft,
-    size      = (900, 600),
+    size      = (1000, 800),
+    left_margin = 20Plots.mm,
     right_margin = 14Plots.mm,
 )
 plot!(p, d_vals, times_mf_single;
@@ -95,13 +108,15 @@ plot!(p_right, d_vals, speedup;
     marker = :diamond,
     yaxis  = :identity,
     ylabel = "Speedup (direct / mat-free)",
+    yguidefontsize = axis_label_fs,
+    ytickfontsize  = tick_fs,
     legend = false,
 )
 
 # Proxy series so speedup appears in the main legend.
 plot!(p, [NaN], [NaN]; label = "speedup", color = :black, marker = :diamond)
 
-savefig(p, "mat_vec_product_timing_$(Threads.nthreads())_threads_$(thread_strategy).png")
+savefig(p, "mat_vec_product_timing_$(Threads.nthreads())_threads_$(thread_strategy).svg")
 println("Saved")
 
 # `display` can fail in headless or constrained render contexts even when savefig succeeds.
